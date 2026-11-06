@@ -1,0 +1,37 @@
+name: Windows tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install tested dependencies
+        run: python -m pip install -r requirements-lock.txt
+      - name: Fetch pinned FFmpeg with checksum verification
+        shell: powershell
+        run: ./scripts/fetch_ffmpeg.ps1
+      - name: Run local-only synthetic media and unit tests
+        run: python -m pytest tests -q --junitxml=test-results.xml
+      - name: Collect test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-report
+          path: test-results.xml
+          if-no-files-found: ignore
